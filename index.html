@@ -1,432 +1,444 @@
-import React, { useState, useEffect, useRef } from 'react';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TránsitoBot - Examen de Conducción</title>
+    <!-- Importar Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importar React y ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Importar Babel para leer JSX en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
 
-// Banco de datos compactado para eficiencia (Pregunta, Opción A, Opción B, Opción C, Opción D, Índice Correcto)
-const rawBank = [
-  // SEÑALES Y MARCAS VIALES
-  ["¿Qué indica una señal de tránsito con forma de octágono rojo y letras blancas?", "Ceda el paso", "Pare", "Prohibido parquear", "Zona escolar", 1],
-  ["¿Qué significa una línea amarilla continua en el centro de la vía?", "Vía de un solo sentido, prohibido adelantar", "Vía de doble sentido, permitido adelantar", "Vía de doble sentido, prohibido adelantar", "Zona de parqueo", 2],
-  ["Las señales preventivas tienen por lo general:", "Fondo amarillo y símbolos negros", "Fondo blanco y orla roja", "Fondo azul y símbolos blancos", "Fondo verde y letras blancas", 0],
-  ["¿Qué indica una línea blanca segmentada o discontinua en la vía?", "Separación de carriles en doble sentido", "Prohibición de cambio de carril", "Separación de carriles en el mismo sentido, permitido adelantar", "Zona exclusiva de peatones", 2],
-  ["Las señales informativas suelen tener:", "Fondo amarillo", "Fondo azul o verde", "Fondo rojo", "Fondo negro", 1],
-  ["¿Qué significa una doble línea amarilla en el centro de la vía?", "Permitido adelantar en ambos sentidos", "Prohibido adelantar en ambos sentidos", "Carril exclusivo para buses", "Zona de cruce peatonal", 1],
-  ["Si encuentra una señal reglamentaria circular, fondo blanco, orla roja y una 'E' tachada, significa:", "Estacionamiento permitido", "Parada permitida", "Prohibido estacionar", "Prohibido el paso de vehículos pesados", 2],
-  ["¿Qué indica un semáforo en luz amarilla intermitente?", "Debe detenerse completamente", "Acelere para cruzar rápido", "Reduzca la velocidad y transite con precaución", "Vía cerrada", 2],
-  ["La señal de 'Ceda el paso' tiene forma:", "Circular", "Octagonal", "Triangular con el vértice hacia abajo", "Rombo", 2],
-  ["Las señales que tienen forma de rombo, fondo amarillo y símbolos negros son:", "Reglamentarias", "Informativas", "Preventivas", "De obra", 2],
-  ["¿Qué significa una señal azul con una silla de ruedas blanca?", "Hospital cercano", "Parqueadero exclusivo para personas con movilidad reducida", "Zona de descanso", "Paso peatonal", 1],
-  ["¿Qué indica una flecha verde en un semáforo?", "Puede avanzar únicamente en la dirección de la flecha", "Precaución", "Pare", "Vía libre en todas las direcciones", 0],
-  ["Una línea de pare en la vía es:", "Una línea amarilla longitudinal", "Una línea blanca transversal", "Una línea roja", "Una zona achurada", 1],
-  ["Si la vía está demarcada con una línea amarilla continua y otra discontinua:", "Solo puede adelantar el que tiene la línea continua a su lado", "Solo puede adelantar el que tiene la línea discontinua a su lado", "Nadie puede adelantar", "Ambos pueden adelantar", 1],
-  ["Las señales reglamentarias tienen el propósito de:", "Advertir sobre peligros", "Indicar direcciones y rutas", "Indicar prohibiciones, restricciones y obligaciones", "Mostrar lugares turísticos", 2],
-  ["¿Qué señalización se utiliza para indicar zonas de obras en la vía?", "Señales de color azul", "Señales de color naranja", "Señales de color verde", "Señales de color blanco", 1],
-  ["Un cruce peatonal tipo cebra se identifica por:", "Líneas amarillas cruzadas", "Líneas blancas longitudinales paralelas a la vía", "Líneas blancas transversales paralelas al flujo peatonal", "Líneas rojas", 2],
-  ["¿Qué significa una luz roja intermitente en un semáforo?", "Peligro, vía cerrada", "Actúe como si fuera una señal de PARE", "Paso peatonal exclusivo", "Reduzca la velocidad y pase", 1],
-  ["La señal 'Prohibido girar a la izquierda' es de tipo:", "Preventiva", "Informativa", "Reglamentaria", "De obra", 2],
-  ["Si encuentra un agente de tránsito dando indicaciones que contradicen un semáforo:", "Debe obedecer al semáforo", "Debe obedecer al agente de tránsito", "Debe pitar para que se quite", "Debe detenerse y esperar a que cambie el semáforo", 1],
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-  // LÍMITES DE VELOCIDAD Y PRELACIÓN
-  ["Según la Ley Julián Esteban, el límite general de velocidad en zonas urbanas es de:", "60 km/h", "50 km/h", "40 km/h", "30 km/h", 1],
-  ["En zonas escolares o residenciales, la velocidad máxima permitida es de:", "40 km/h", "50 km/h", "30 km/h", "20 km/h", 2],
-  ["El límite máximo de velocidad para vehículos de servicio público en carreteras nacionales es de:", "100 km/h", "80 km/h", "90 km/h", "120 km/h", 2],
-  ["En una intersección sin señales, ¿quién tiene la prelación de paso?", "El vehículo más grande", "El vehículo que va más rápido", "El vehículo que se aproxima por la derecha", "El vehículo que se aproxima por la izquierda", 2],
-  ["Al llegar a una glorieta, ¿quién tiene la prelación?", "El vehículo que va a entrar a la glorieta", "El vehículo que ya se encuentra dentro de la glorieta", "El vehículo más pesado", "El que pite primero", 1],
-  ["¿Qué distancia debe mantener con el vehículo de adelante si transita a 60 km/h?", "10 metros", "20 metros", "Mínimo 30 metros (o regla de los 3 segundos)", "5 metros", 2],
-  ["Si un vehículo de emergencia (ambulancia, bomberos) se aproxima con sirenas y luces:", "Debe acelerar para no estorbar", "Debe detenerse donde está", "Debe ceder el paso ubicándose en el carril derecho o orillándose", "Debe pitarles", 2],
-  ["Al realizar un adelantamiento, usted debe:", "Hacerlo por la berma", "Hacerlo por la derecha", "Hacerlo por la izquierda y retornar a su carril de forma segura", "Pitar constantemente", 2],
-  ["¿Está permitido adelantar en curvas, puentes o túneles?", "Sí, si no viene nadie", "No, está totalmente prohibido", "Sí, pero solo de día", "Solo a motocicletas", 1],
-  ["Si usted transita por una vía y se encuentra con peatones cruzando por una zona no demarcada:", "Usted tiene la prelación siempre", "Debe acelerar para pasar antes", "Debe pitar para que se quiten", "Debe reducir la velocidad y ceder el paso para evitar un accidente", 3],
-  ["En una vía de tres carriles en el mismo sentido, el carril izquierdo se usa para:", "Transitar a baja velocidad", "Estacionar", "Adelantar o transitar a mayor velocidad", "Vehículos pesados", 2],
-  ["¿Qué debe hacer antes de iniciar un giro o cambio de carril?", "Frenar bruscamente", "Mirar los espejos y poner la luz direccional con anticipación", "Pitar dos veces", "Sacar la mano", 1],
-  ["La maniobra de reversa está permitida:", "En cualquier vía", "En autopistas", "Solo para estacionar o en casos de estricta necesidad", "Para devolverse si se pasó una calle", 2],
-  ["Si va manejando de noche y un vehículo viene en sentido contrario con luces altas:", "Debe ponerle también las luces altas", "Debe reducir la velocidad y guiar su vista hacia la línea de borde derecha", "Debe cerrar los ojos un momento", "Debe pitar", 1],
-  ["Al descender por una pendiente pronunciada, lo correcto es:", "Apagar el motor", "Bajar en neutro para ahorrar gasolina", "Utilizar una marcha baja para aprovechar el freno de motor", "Frenar constantemente a fondo", 2],
+        // Banco de datos compactado para eficiencia (Pregunta, Opción A, Opción B, Opción C, Opción D, Índice Correcto)
+        const rawBank = [
+          // SEÑALES Y MARCAS VIALES
+          ["¿Qué indica una señal de tránsito con forma de octágono rojo y letras blancas?", "Ceda el paso", "Pare", "Prohibido parquear", "Zona escolar", 1],
+          ["¿Qué significa una línea amarilla continua en el centro de la vía?", "Vía de un solo sentido, prohibido adelantar", "Vía de doble sentido, permitido adelantar", "Vía de doble sentido, prohibido adelantar", "Zona de parqueo", 2],
+          ["Las señales preventivas tienen por lo general:", "Fondo amarillo y símbolos negros", "Fondo blanco y orla roja", "Fondo azul y símbolos blancos", "Fondo verde y letras blancas", 0],
+          ["¿Qué indica una línea blanca segmentada o discontinua en la vía?", "Separación de carriles en doble sentido", "Prohibición de cambio de carril", "Separación de carriles en el mismo sentido, permitido adelantar", "Zona exclusiva de peatones", 2],
+          ["Las señales informativas suelen tener:", "Fondo amarillo", "Fondo azul o verde", "Fondo rojo", "Fondo negro", 1],
+          ["¿Qué significa una doble línea amarilla en el centro de la vía?", "Permitido adelantar en ambos sentidos", "Prohibido adelantar en ambos sentidos", "Carril exclusivo para buses", "Zona de cruce peatonal", 1],
+          ["Si encuentra una señal reglamentaria circular, fondo blanco, orla roja y una 'E' tachada, significa:", "Estacionamiento permitido", "Parada permitida", "Prohibido estacionar", "Prohibido el paso de vehículos pesados", 2],
+          ["¿Qué indica un semáforo en luz amarilla intermitente?", "Debe detenerse completamente", "Acelere para cruzar rápido", "Reduzca la velocidad y transite con precaución", "Vía cerrada", 2],
+          ["La señal de 'Ceda el paso' tiene forma:", "Circular", "Octagonal", "Triangular con el vértice hacia abajo", "Rombo", 2],
+          ["Las señales que tienen forma de rombo, fondo amarillo y símbolos negros son:", "Reglamentarias", "Informativas", "Preventivas", "De obra", 2],
+          ["¿Qué significa una señal azul con una silla de ruedas blanca?", "Hospital cercano", "Parqueadero exclusivo para personas con movilidad reducida", "Zona de descanso", "Paso peatonal", 1],
+          ["¿Qué indica una flecha verde en un semáforo?", "Puede avanzar únicamente en la dirección de la flecha", "Precaución", "Pare", "Vía libre en todas las direcciones", 0],
+          ["Una línea de pare en la vía es:", "Una línea amarilla longitudinal", "Una línea blanca transversal", "Una línea roja", "Una zona achurada", 1],
+          ["Si la vía está demarcada con una línea amarilla continua y otra discontinua:", "Solo puede adelantar el que tiene la línea continua a su lado", "Solo puede adelantar el que tiene la línea discontinua a su lado", "Nadie puede adelantar", "Ambos pueden adelantar", 1],
+          ["Las señales reglamentarias tienen el propósito de:", "Advertir sobre peligros", "Indicar direcciones y rutas", "Indicar prohibiciones, restricciones y obligaciones", "Mostrar lugares turísticos", 2],
+          ["¿Qué señalización se utiliza para indicar zonas de obras en la vía?", "Señales de color azul", "Señales de color naranja", "Señales de color verde", "Señales de color blanco", 1],
+          ["Un cruce peatonal tipo cebra se identifica por:", "Líneas amarillas cruzadas", "Líneas blancas longitudinales paralelas a la vía", "Líneas blancas transversales paralelas al flujo peatonal", "Líneas rojas", 2],
+          ["¿Qué significa una luz roja intermitente en un semáforo?", "Peligro, vía cerrada", "Actúe como si fuera una señal de PARE", "Paso peatonal exclusivo", "Reduzca la velocidad y pase", 1],
+          ["La señal 'Prohibido girar a la izquierda' es de tipo:", "Preventiva", "Informativa", "Reglamentaria", "De obra", 2],
+          ["Si encuentra un agente de tránsito dando indicaciones que contradicen un semáforo:", "Debe obedecer al semáforo", "Debe obedecer al agente de tránsito", "Debe pitar para que se quite", "Debe detenerse y esperar a que cambie el semáforo", 1],
 
-  // DOCUMENTOS (SOAT, RUNT, LICENCIA)
-  ["¿Qué es el SOAT?", "Un impuesto vehicular", "Seguro Obligatorio de Accidentes de Tránsito", "Un certificado de gases", "Sistema de Organización de Automotores", 1],
-  ["El SOAT cubre los gastos médicos de:", "Solo del conductor", "Solo de los pasajeros", "Todas las víctimas del accidente (conductor, pasajeros, peatones)", "Los daños al otro vehículo", 2],
-  ["¿Qué es el RUNT?", "Registro Único Nacional de Tránsito", "Revisión Única Nacional Técnica", "Red de Usuarios de Nuevos Transportes", "Reglamento Único Nacional de Tránsito", 0],
-  ["La licencia de conducción de categoría B1 permite conducir:", "Motocicletas", "Camiones pesados", "Automóviles, camperos, camionetas de servicio particular", "Buses de servicio público", 2],
-  ["¿Cada cuánto se debe renovar la licencia para servicio particular si el conductor tiene menos de 60 años?", "Cada 2 años", "Cada 5 años", "Cada 10 años", "No se renueva, es vitalicia", 2],
-  ["Para conducir una motocicleta de más de 125cc, se requiere la licencia de categoría:", "A1", "A2", "B1", "C1", 1],
-  ["La Revisión Técnico Mecánica (RTM) para vehículos particulares nuevos debe realizarse por primera vez a los:", "2 años de la matrícula", "3 años de la matrícula", "5 años de la matrícula", "6 años de la matrícula", 3],
-  ["Después de la primera revisión, la RTM para vehículos particulares debe hacerse:", "Cada año", "Cada 2 años", "Cada 5 años", "Cuando el vehículo falle", 0],
-  ["Para motocicletas, la primera Revisión Técnico Mecánica se debe hacer a los:", "6 meses", "1 año", "2 años", "6 años", 2],
-  ["Si usted conduce sin portar el SOAT vigente:", "Solo recibe una advertencia", "Le inmovilizan el vehículo y le imponen una multa de 30 SMLDV", "Le cancelan la licencia", "Debe comprarlo en las próximas 24 horas para evitar multa", 1],
-  ["El documento que demuestra la propiedad de un vehículo es:", "El SOAT", "La Licencia de Conducción", "La Licencia de Tránsito (Tarjeta de propiedad)", "El RUNT", 2],
-  ["¿Es obligatorio portar físicamente los documentos (Licencia, SOAT) si están registrados en el RUNT?", "Sí, siempre se deben llevar en físico", "No, las autoridades pueden consultarlos en línea", "Solo si va a salir de la ciudad", "Solo el SOAT es físico", 1],
-  ["La licencia de categoría C1, C2, C3 corresponde a vehículos de:", "Servicio diplomático", "Servicio particular", "Servicio público", "Maquinaria agrícola", 2],
-  ["Para renovar la licencia de conducción es requisito indispensable:", "Estar a paz y salvo por multas de tránsito o tener acuerdo de pago", "Comprar un carro nuevo", "Hacer nuevamente el curso completo", "Ser mayor de 30 años", 0],
-  ["¿Un menor de edad (16 años) puede sacar licencia de conducción en Colombia?", "No, bajo ninguna circunstancia", "Sí, pero solo para vehículos de servicio particular y motos", "Sí, para cualquier tipo de vehículo", "Sí, pero debe ir acompañado de un adulto siempre", 1],
+          // LÍMITES DE VELOCIDAD Y PRELACIÓN
+          ["Según la Ley Julián Esteban, el límite general de velocidad en zonas urbanas es de:", "60 km/h", "50 km/h", "40 km/h", "30 km/h", 1],
+          ["En zonas escolares o residenciales, la velocidad máxima permitida es de:", "40 km/h", "50 km/h", "30 km/h", "20 km/h", 2],
+          ["El límite máximo de velocidad para vehículos de servicio público en carreteras nacionales es de:", "100 km/h", "80 km/h", "90 km/h", "120 km/h", 2],
+          ["En una intersección sin señales, ¿quién tiene la prelación de paso?", "El vehículo más grande", "El vehículo que va más rápido", "El vehículo que se aproxima por la derecha", "El vehículo que se aproxima por la izquierda", 2],
+          ["Al llegar a una glorieta, ¿quién tiene la prelación?", "El vehículo que va a entrar a la glorieta", "El vehículo que ya se encuentra dentro de la glorieta", "El vehículo más pesado", "El que pite primero", 1],
+          ["¿Qué distancia debe mantener con el vehículo de adelante si transita a 60 km/h?", "10 metros", "20 metros", "Mínimo 30 metros (o regla de los 3 segundos)", "5 metros", 2],
+          ["Si un vehículo de emergencia (ambulancia, bomberos) se aproxima con sirenas y luces:", "Debe acelerar para no estorbar", "Debe detenerse donde está", "Debe ceder el paso ubicándose en el carril derecho o orillándose", "Debe pitarles", 2],
+          ["Al realizar un adelantamiento, usted debe:", "Hacerlo por la berma", "Hacerlo por la derecha", "Hacerlo por la izquierda y retornar a su carril de forma segura", "Pitar constantemente", 2],
+          ["¿Está permitido adelantar en curvas, puentes o túneles?", "Sí, si no viene nadie", "No, está totalmente prohibido", "Sí, pero solo de día", "Solo a motocicletas", 1],
+          ["Si usted transita por una vía y se encuentra con peatones cruzando por una zona no demarcada:", "Usted tiene la prelación siempre", "Debe acelerar para pasar antes", "Debe pitar para que se quiten", "Debe reducir la velocidad y ceder el paso para evitar un accidente", 3],
+          ["En una vía de tres carriles en el mismo sentido, el carril izquierdo se usa para:", "Transitar a baja velocidad", "Estacionar", "Adelantar o transitar a mayor velocidad", "Vehículos pesados", 2],
+          ["¿Qué debe hacer antes de iniciar un giro o cambio de carril?", "Frenar bruscamente", "Mirar los espejos y poner la luz direccional con anticipación", "Pitar dos veces", "Sacar la mano", 1],
+          ["La maniobra de reversa está permitida:", "En cualquier vía", "En autopistas", "Solo para estacionar o en casos de estricta necesidad", "Para devolverse si se pasó una calle", 2],
+          ["Si va manejando de noche y un vehículo viene en sentido contrario con luces altas:", "Debe ponerle también las luces altas", "Debe reducir la velocidad y guiar su vista hacia la línea de borde derecha", "Debe cerrar los ojos un momento", "Debe pitar", 1],
+          ["Al descender por una pendiente pronunciada, lo correcto es:", "Apagar el motor", "Bajar en neutro para ahorrar gasolina", "Utilizar una marcha baja para aprovechar el freno de motor", "Frenar constantemente a fondo", 2],
 
-  // INFRACCIONES Y SANCIONES
-  ["Conducir bajo los efectos del alcohol (Grado 3) puede ocasionar:", "Solo una multa económica", "La cancelación definitiva de la licencia y multa económica severa", "Suspensión de la licencia por 1 mes", "Servicio comunitario", 1],
-  ["Si usted se niega a realizarse la prueba de alcoholemia cuando un agente se lo solicita:", "No pasa nada, es su derecho", "Se le impondrá la máxima sanción (Grado 3) por renuencia", "Lo llevan a un hospital a sacarle sangre", "Le quitan el carro pero no la licencia", 1],
-  ["Pasarse un semáforo en rojo o una señal de PARE genera una multa de:", "15 SMLDV", "30 SMLDV", "45 SMLDV", "No genera multa si no hay choque", 1],
-  ["Estacionar en sitios prohibidos puede ocasionar:", "Solo una amonestación", "Multa de 15 SMLDV e inmovilización del vehículo (grúa)", "Suspensión de la licencia", "Pérdida de puntos", 1],
-  ["Hablar por celular sin usar manos libres mientras conduce:", "Está permitido en los semáforos", "Es una infracción que genera multa", "Solo está prohibido en carretera", "Solo aplica para servicio público", 1],
-  ["La medida de 'Pico y Placa' es una restricción por:", "Contaminación auditiva", "Día y último dígito de la placa", "Color del vehículo", "Marca del vehículo", 1],
-  ["Conducir sin llevar puesto el cinturón de seguridad da lugar a:", "Retención del vehículo", "Solo llamado de atención", "Multa de 15 SMLDV", "Cancelación de licencia", 2],
-  ["Si usted comete una infracción detectada por cámaras (Fotomulta), ¿quién es el responsable solidario?", "Solo quien iba manejando", "El propietario del vehículo si no demuestra quién conducía", "El que vendió el carro", "El pasajero", 1],
-  ["Llevar niños menores de 10 años en el asiento delantero:", "Está permitido si llevan cinturón", "Está prohibido", "Está permitido si van en brazos", "Depende del tamaño del niño", 1],
-  ["Transitar por los carriles exclusivos de transporte masivo (ej. TransMilenio) genera:", "Multa y es causal de inmovilización", "Solo multa", "Advertencia verbal", "Ninguna sanción de noche", 0],
-  ["¿Puede ser inmovilizado su vehículo por no portar equipo de prevención y seguridad (kit de carretera)?", "Sí", "No, solo genera multa", "Solo si viaja fuera de la ciudad", "Solo aplica para transporte público", 1],
-  ["Adelantar en zona prohibida (línea continua) genera:", "Multa de 30 SMLDV", "Inmovilización del vehículo", "Cancelación de licencia", "Trabajo comunitario", 0],
-  ["Si es sorprendido prestando servicio público en un vehículo particular (transporte informal):", "Le cobran el doble de impuestos", "Suspensión de la licencia e inmovilización del vehículo", "No pasa nada si es por una aplicación", "Solo se multa al pasajero", 1],
-  ["¿Cuántas veces puede ser reincidente en infracciones en menos de 6 meses para que le suspendan la licencia?", "2 veces", "3 veces", "4 veces", "5 veces", 0],
-  ["Fugar del lugar del accidente de tránsito es:", "Un derecho para evitar problemas", "Un agravante que genera sanciones penales y de tránsito", "Permitido si el choque fue leve", "Sancionado solo con multa menor", 1],
+          // DOCUMENTOS (SOAT, RUNT, LICENCIA)
+          ["¿Qué es el SOAT?", "Un impuesto vehicular", "Seguro Obligatorio de Accidentes de Tránsito", "Un certificado de gases", "Sistema de Organización de Automotores", 1],
+          ["El SOAT cubre los gastos médicos de:", "Solo del conductor", "Solo de los pasajeros", "Todas las víctimas del accidente (conductor, pasajeros, peatones)", "Los daños al otro vehículo", 2],
+          ["¿Qué es el RUNT?", "Registro Único Nacional de Tránsito", "Revisión Única Nacional Técnica", "Red de Usuarios de Nuevos Transportes", "Reglamento Único Nacional de Tránsito", 0],
+          ["La licencia de conducción de categoría B1 permite conducir:", "Motocicletas", "Camiones pesados", "Automóviles, camperos, camionetas de servicio particular", "Buses de servicio público", 2],
+          ["¿Cada cuánto se debe renovar la licencia para servicio particular si el conductor tiene menos de 60 años?", "Cada 2 años", "Cada 5 años", "Cada 10 años", "No se renueva, es vitalicia", 2],
+          ["Para conducir una motocicleta de más de 125cc, se requiere la licencia de categoría:", "A1", "A2", "B1", "C1", 1],
+          ["La Revisión Técnico Mecánica (RTM) para vehículos particulares nuevos debe realizarse por primera vez a los:", "2 años de la matrícula", "3 años de la matrícula", "5 años de la matrícula", "6 años de la matrícula", 3],
+          ["Después de la primera revisión, la RTM para vehículos particulares debe hacerse:", "Cada año", "Cada 2 años", "Cada 5 años", "Cuando el vehículo falle", 0],
+          ["Para motocicletas, la primera Revisión Técnico Mecánica se debe hacer a los:", "6 meses", "1 año", "2 años", "6 años", 2],
+          ["Si usted conduce sin portar el SOAT vigente:", "Solo recibe una advertencia", "Le inmovilizan el vehículo y le imponen una multa de 30 SMLDV", "Le cancelan la licencia", "Debe comprarlo en las próximas 24 horas para evitar multa", 1],
+          ["El documento que demuestra la propiedad de un vehículo es:", "El SOAT", "La Licencia de Conducción", "La Licencia de Tránsito (Tarjeta de propiedad)", "El RUNT", 2],
+          ["¿Es obligatorio portar físicamente los documentos (Licencia, SOAT) si están registrados en el RUNT?", "Sí, siempre se deben llevar en físico", "No, las autoridades pueden consultarlos en línea", "Solo si va a salir de la ciudad", "Solo el SOAT es físico", 1],
+          ["La licencia de categoría C1, C2, C3 corresponde a vehículos de:", "Servicio diplomático", "Servicio particular", "Servicio público", "Maquinaria agrícola", 2],
+          ["Para renovar la licencia de conducción es requisito indispensable:", "Estar a paz y salvo por multas de tránsito o tener acuerdo de pago", "Comprar un carro nuevo", "Hacer nuevamente el curso completo", "Ser mayor de 30 años", 0],
+          ["¿Un menor de edad (16 años) puede sacar licencia de conducción en Colombia?", "No, bajo ninguna circunstancia", "Sí, pero solo para vehículos de servicio particular y motos", "Sí, para cualquier tipo de vehículo", "Sí, pero debe ir acompañado de un adulto siempre", 1],
 
-  // SEGURIDAD VIAL Y ACTORES VIALES
-  ["¿Quién es el actor vial más vulnerable?", "El motociclista", "El ciclista", "El peatón", "El conductor de vehículo particular", 2],
-  ["Al sobrepasar a un ciclista en la vía, debe dejar una distancia lateral mínima de:", "0.5 metros", "1.0 metro", "1.5 metros", "3.0 metros", 2],
-  ["Los peatones deben transitar por:", "La berma", "El borde de la vía", "Las aceras, andenes y puentes peatonales", "La ciclorruta", 2],
-  ["Si va en moto, el uso del casco es obligatorio para:", "Solo el conductor", "Solo si viaja en carretera", "Conductor y acompañante, siempre abrochado", "Solo de noche", 2],
-  ["Los motociclistas deben usar prendas reflectivas:", "Solo cuando llueve", "Entre las 6:00 pm y las 6:00 am o con poca visibilidad", "Todo el día", "No es obligatorio", 1],
-  ["¿Qué indica la 'distancia de reacción'?", "Los metros que avanza el carro mientras el conductor pisa el freno al ver el peligro", "El tiempo que tarda el carro en detenerse por completo", "La distancia entre dos carros estacionados", "El tiempo de inflado del airbag", 0],
-  ["El cinturón de seguridad es obligatorio:", "Solo para el conductor", "Para los pasajeros de los asientos delanteros", "Para todos los ocupantes del vehículo en todas las vías", "Solo en vías nacionales", 2],
-  ["El 'efecto túnel' debido al exceso de velocidad significa que:", "El carro se mete en un túnel", "Se pierde el campo visual lateral", "Las luces del carro fallan", "Se gasta más gasolina", 1],
-  ["Un factor humano que causa accidentes frecuentemente es:", "Fallas en los frenos", "Vías en mal estado", "El microsueño o fatiga", "Lluvia intensa", 2],
-  ["Las sillas de retención infantil (sillas para bebé) deben instalarse:", "En el asiento del copiloto", "En el asiento trasero", "En el baúl", "No son obligatorias", 1],
-  ["¿Qué es el hidroplaneo (aquaplaning)?", "Lavar el carro a presión", "Pérdida de tracción al pasar sobre un charco de agua a alta velocidad", "Un tipo de líquido de frenos", "Conducir bajo la lluvia con las luces apagadas", 1],
-  ["Si se estalla una llanta delantera mientras conduce rápido, lo peor que puede hacer es:", "Frenar a fondo bruscamente", "Sostener firme el volante", "Soltar el acelerador suavemente", "Poner luces de parqueo", 0],
-  ["Para evitar el encandilamiento nocturno por un vehículo que viene detrás, usted debe:", "Frenar en seco", "Ajustar el espejo retrovisor interior a la posición nocturna", "Poner las luces altas", "Acelerar", 1],
-  ["Si hay niebla espesa, usted debe encender:", "Luces altas", "Luces medias o exploradoras y reducir la velocidad", "Luces de cabina", "Apagar las luces", 1],
-  ["El punto ciego de un vehículo es:", "El área que los espejos retrovisores no alcanzan a mostrar", "El baúl del carro", "El centro del parabrisas", "La llanta de repuesto", 0],
+          // INFRACCIONES Y SANCIONES
+          ["Conducir bajo los efectos del alcohol (Grado 3) puede ocasionar:", "Solo una multa económica", "La cancelación definitiva de la licencia y multa económica severa", "Suspensión de la licencia por 1 mes", "Servicio comunitario", 1],
+          ["Si usted se niega a realizarse la prueba de alcoholemia cuando un agente se lo solicita:", "No pasa nada, es su derecho", "Se le impondrá la máxima sanción (Grado 3) por renuencia", "Lo llevan a un hospital a sacarle sangre", "Le quitan el carro pero no la licencia", 1],
+          ["Pasarse un semáforo en rojo o una señal de PARE genera una multa de:", "15 SMLDV", "30 SMLDV", "45 SMLDV", "No genera multa si no hay choque", 1],
+          ["Estacionar en sitios prohibidos puede ocasionar:", "Solo una amonestación", "Multa de 15 SMLDV e inmovilización del vehículo (grúa)", "Suspensión de la licencia", "Pérdida de puntos", 1],
+          ["Hablar por celular sin usar manos libres mientras conduce:", "Está permitido en los semáforos", "Es una infracción que genera multa", "Solo está prohibido en carretera", "Solo aplica para servicio público", 1],
+          ["La medida de 'Pico y Placa' es una restricción por:", "Contaminación auditiva", "Día y último dígito de la placa", "Color del vehículo", "Marca del vehículo", 1],
+          ["Conducir sin llevar puesto el cinturón de seguridad da lugar a:", "Retención del vehículo", "Solo llamado de atención", "Multa de 15 SMLDV", "Cancelación de licencia", 2],
+          ["Si usted comete una infracción detectada por cámaras (Fotomulta), ¿quién es el responsable solidario?", "Solo quien iba manejando", "El propietario del vehículo si no demuestra quién conducía", "El que vendió el carro", "El pasajero", 1],
+          ["Llevar niños menores de 10 años en el asiento delantero:", "Está permitido si llevan cinturón", "Está prohibido", "Está permitido si van en brazos", "Depende del tamaño del niño", 1],
+          ["Transitar por los carriles exclusivos de transporte masivo (ej. TransMilenio) genera:", "Multa y es causal de inmovilización", "Solo multa", "Advertencia verbal", "Ninguna sanción de noche", 0],
+          ["¿Puede ser inmovilizado su vehículo por no portar equipo de prevención y seguridad (kit de carretera)?", "Sí", "No, solo genera multa", "Solo si viaja fuera de la ciudad", "Solo aplica para transporte público", 1],
+          ["Adelantar en zona prohibida (línea continua) genera:", "Multa de 30 SMLDV", "Inmovilización del vehículo", "Cancelación de licencia", "Trabajo comunitario", 0],
+          ["Si es sorprendido prestando servicio público en un vehículo particular (transporte informal):", "Le cobran el doble de impuestos", "Suspensión de la licencia e inmovilización del vehículo", "No pasa nada si es por una aplicación", "Solo se multa al pasajero", 1],
+          ["¿Cuántas veces puede ser reincidente en infracciones en menos de 6 meses para que le suspendan la licencia?", "2 veces", "3 veces", "4 veces", "5 veces", 0],
+          ["Fugar del lugar del accidente de tránsito es:", "Un derecho para evitar problemas", "Un agravante que genera sanciones penales y de tránsito", "Permitido si el choque fue leve", "Sancionado solo con multa menor", 1],
 
-  // MECÁNICA BÁSICA Y EQUIPO DE CARRETERA
-  ["El equipo de prevención y seguridad (kit de carretera) NO exige tener:", "Llanta de repuesto", "Botiquín de primeros auxilios", "Una carpa para acampar", "Extintor", 2],
-  ["¿Para qué sirve el líquido refrigerante?", "Para limpiar los vidrios", "Para evitar que el motor se sobrecaliente", "Para lubricar los frenos", "Para que el aire acondicionado enfríe más", 1],
-  ["El labrado mínimo permitido para las llantas de un vehículo particular es de:", "1.0 mm", "1.6 mm", "2.0 mm", "3.0 mm", 1],
-  ["¿Qué indica un testigo rojo en forma de 'lata de aceite' en el tablero?", "Bajo nivel de gasolina", "Baja presión de aceite en el motor, deténgase de inmediato", "Freno de mano puesto", "Puerta abierta", 1],
-  ["Si se enciende el testigo de temperatura del motor, usted debe:", "Seguir hasta encontrar un taller", "Acelerar para que entre más aire", "Detener el vehículo de inmediato y apagar el motor", "Echarle agua fría al motor estando encendido", 2],
-  ["El freno de mano (freno de estacionamiento) actúa normalmente sobre:", "Las 4 ruedas", "Las ruedas delanteras", "Las ruedas traseras", "El motor", 2],
-  ["El desgaste irregular en un solo lado de la llanta suele indicar:", "Exceso de aire", "Falta de aire", "Problemas de alineación", "Amortiguadores nuevos", 2],
-  ["¿Con qué frecuencia se debe revisar la presión de las llantas?", "Cada año", "Una vez al mes o antes de viajes largos (en frío)", "Solo cuando se vean desinfladas", "Cada cambio de aceite", 1],
-  ["La batería del vehículo sirve principalmente para:", "Frenar el carro", "Dar la energía inicial para encender el motor y alimentar sistemas eléctricos", "Enfriar el motor", "Dar potencia a las llantas", 1],
-  ["Si el pedal del freno se siente 'esponjoso' o se va a fondo:", "Es normal cuando hace calor", "Significa que las llantas están nuevas", "Puede haber aire en el sistema o falta de líquido de frenos", "Es porque el aceite está viejo", 2],
-  ["El extintor del vehículo debe ser recargado:", "Cada 5 años", "Cuando se use", "Una vez al año", "Nunca, no vence", 2],
-  ["Los amortiguadores hacen parte del sistema de:", "Frenos", "Suspensión", "Dirección", "Transmisión", 1],
-  ["Cambiar el aceite del motor es necesario porque:", "Ayuda a enfriar la cabina", "Evita la fricción y desgaste de las piezas internas del motor", "Aumenta la velocidad máxima del carro", "Mejora el sonido del pito", 1],
-  ["El sistema de frenos ABS sirve para:", "Frenar en menos de 1 metro", "Evitar que las llantas se bloqueen en una frenada de emergencia, manteniendo la dirección", "Acelerar más rápido", "Hacer los frenos eternos", 1],
-  ["Si la dirección vibra mucho a ciertas velocidades, el vehículo necesita:", "Cambio de aceite", "Balanceo de llantas", "Líquido de frenos", "Gasolina extra", 1],
+          // SEGURIDAD VIAL Y ACTORES VIALES
+          ["¿Quién es el actor vial más vulnerable?", "El motociclista", "El ciclista", "El peatón", "El conductor de vehículo particular", 2],
+          ["Al sobrepasar a un ciclista en la vía, debe dejar una distancia lateral mínima de:", "0.5 metros", "1.0 metro", "1.5 metros", "3.0 metros", 2],
+          ["Los peatones deben transitar por:", "La berma", "El borde de la vía", "Las aceras, andenes y puentes peatonales", "La ciclorruta", 2],
+          ["Si va en moto, el uso del casco es obligatorio para:", "Solo el conductor", "Solo si viaja en carretera", "Conductor y acompañante, siempre abrochado", "Solo de noche", 2],
+          ["Los motociclistas deben usar prendas reflectivas:", "Solo cuando llueve", "Entre las 6:00 pm y las 6:00 am o con poca visibilidad", "Todo el día", "No es obligatorio", 1],
+          ["¿Qué indica la 'distancia de reacción'?", "Los metros que avanza el carro mientras el conductor pisa el freno al ver el peligro", "El tiempo que tarda el carro en detenerse por completo", "La distancia entre dos carros estacionados", "El tiempo de inflado del airbag", 0],
+          ["El cinturón de seguridad es obligatorio:", "Solo para el conductor", "Para los pasajeros de los asientos delanteros", "Para todos los ocupantes del vehículo en todas las vías", "Solo en vías nacionales", 2],
+          ["El 'efecto túnel' debido al exceso de velocidad significa que:", "El carro se mete en un túnel", "Se pierde el campo visual lateral", "Las luces del carro fallan", "Se gasta más gasolina", 1],
+          ["Un factor humano que causa accidentes frecuentemente es:", "Fallas en los frenos", "Vías en mal estado", "El microsueño o fatiga", "Lluvia intensa", 2],
+          ["Las sillas de retención infantil (sillas para bebé) deben instalarse:", "En el asiento del copiloto", "En el asiento trasero", "En el baúl", "No son obligatorias", 1],
+          ["¿Qué es el hidroplaneo (aquaplaning)?", "Lavar el carro a presión", "Pérdida de tracción al pasar sobre un charco de agua a alta velocidad", "Un tipo de líquido de frenos", "Conducir bajo la lluvia con las luces apagadas", 1],
+          ["Si se estalla una llanta delantera mientras conduce rápido, lo peor que puede hacer es:", "Frenar a fondo bruscamente", "Sostener firme el volante", "Soltar el acelerador suavemente", "Poner luces de parqueo", 0],
+          ["Para evitar el encandilamiento nocturno por un vehículo que viene detrás, usted debe:", "Frenar en seco", "Ajustar el espejo retrovisor interior a la posición nocturna", "Poner las luces altas", "Acelerar", 1],
+          ["Si hay niebla espesa, usted debe encender:", "Luces altas", "Luces medias o exploradoras y reducir la velocidad", "Luces de cabina", "Apagar las luces", 1],
+          ["El punto ciego de un vehículo es:", "El área que los espejos retrovisores no alcanzan a mostrar", "El baúl del carro", "El centro del parabrisas", "La llanta de repuesto", 0],
 
-  // PRIMEROS AUXILIOS Y EMERGENCIAS
-  ["En caso de accidente con heridos, lo primero que debe hacer (si está capacitado) es:", "Mover a los heridos rápido a un taxi", "Proteger el lugar, llamar al 123 y socorrer sin mover bruscamente", "Huir para evitar el comparendo", "Darles agua", 1],
-  ["Si un motociclista accidentado está en el suelo:", "Se le debe quitar el casco de inmediato", "No se le debe quitar el casco, a menos que no respire y se sepa hacerlo", "Se le debe sentar en el andén", "Se le debe dar a beber alcohol", 1],
-  ["¿Qué NO se debe hacer en caso de hemorragia fuerte?", "Hacer presión directa sobre la herida", "Usar una gasa o paño limpio", "Aplicar torniquete si no se está capacitado", "Llamar a emergencias", 2],
-  ["En un botiquín de primeros auxilios vehicular NO es necesario llevar:", "Gasas y vendas", "Tijeras", "Antibióticos y analgésicos fuertes", "Guantes de látex", 2],
-  ["Si sufre un choque 'solo latas' (daños materiales sin heridos), según la ley actual:", "Debe dejar los carros ahí hasta que llegue tránsito", "Debe tomar fotos/videos rápidos y mover los vehículos para no bloquear la vía", "Debe esperar al inspector en la mitad de la vía", "Debe llamar a una ambulancia", 1],
-  ["El número nacional de emergencias en Colombia es:", "911", "123", "112", "119", 1],
+          // MECÁNICA BÁSICA Y EQUIPO DE CARRETERA
+          ["El equipo de prevención y seguridad (kit de carretera) NO exige tener:", "Llanta de repuesto", "Botiquín de primeros auxilios", "Una carpa para acampar", "Extintor", 2],
+          ["¿Para qué sirve el líquido refrigerante?", "Para limpiar los vidrios", "Para evitar que el motor se sobrecaliente", "Para lubricar los frenos", "Para que el aire acondicionado enfríe más", 1],
+          ["El labrado mínimo permitido para las llantas de un vehículo particular es de:", "1.0 mm", "1.6 mm", "2.0 mm", "3.0 mm", 1],
+          ["¿Qué indica un testigo rojo en forma de 'lata de aceite' en el tablero?", "Bajo nivel de gasolina", "Baja presión de aceite en el motor, deténgase de inmediato", "Freno de mano puesto", "Puerta abierta", 1],
+          ["Si se enciende el testigo de temperatura del motor, usted debe:", "Seguir hasta encontrar un taller", "Acelerar para que entre más aire", "Detener el vehículo de inmediato y apagar el motor", "Echarle agua fría al motor estando encendido", 2],
+          ["El freno de mano (freno de estacionamiento) actúa normalmente sobre:", "Las 4 ruedas", "Las ruedas delanteras", "Las ruedas traseras", "El motor", 2],
+          ["El desgaste irregular en un solo lado de la llanta suele indicar:", "Exceso de aire", "Falta de aire", "Problemas de alineación", "Amortiguadores nuevos", 2],
+          ["¿Con qué frecuencia se debe revisar la presión de las llantas?", "Cada año", "Una vez al mes o antes de viajes largos (en frío)", "Solo cuando se vean desinfladas", "Cada cambio de aceite", 1],
+          ["La batería del vehículo sirve principalmente para:", "Frenar el carro", "Dar la energía inicial para encender el motor y alimentar sistemas eléctricos", "Enfriar el motor", "Dar potencia a las llantas", 1],
+          ["Si el pedal del freno se siente 'esponjoso' o se va a fondo:", "Es normal cuando hace calor", "Significa que las llantas están nuevas", "Puede haber aire en el sistema o falta de líquido de frenos", "Es porque el aceite está viejo", 2],
+          ["El extintor del vehículo debe ser recargado:", "Cada 5 años", "Cuando se use", "Una vez al año", "Nunca, no vence", 2],
+          ["Los amortiguadores hacen parte del sistema de:", "Frenos", "Suspensión", "Dirección", "Transmisión", 1],
+          ["Cambiar el aceite del motor es necesario porque:", "Ayuda a enfriar la cabina", "Evita la fricción y desgaste de las piezas internas del motor", "Aumenta la velocidad máxima del carro", "Mejora el sonido del pito", 1],
+          ["El sistema de frenos ABS sirve para:", "Frenar en menos de 1 metro", "Evitar que las llantas se bloqueen en una frenada de emergencia, manteniendo la dirección", "Acelerar más rápido", "Hacer los frenos eternos", 1],
+          ["Si la dirección vibra mucho a ciertas velocidades, el vehículo necesita:", "Cambio de aceite", "Balanceo de llantas", "Líquido de frenos", "Gasolina extra", 1],
 
-  // MISCELÁNEA CÓDIGO DE TRÁNSITO
-  ["¿Qué es el comparendo?", "El pago de la multa", "La orden formal de notificación para que el presunto contraventor se presente ante la autoridad", "La inmovilización del carro", "La grúa", 1],
-  ["Los chalecos reflectivos deben usarse en moto:", "De 6:00 pm a 6:00 am", "De 6:00 am a 6:00 pm", "No son necesarios", "Solo en Bogotá", 0],
-  ["Las motocicletas pueden circular por las ciclorrutas:", "Verdadero, si van despacio", "Falso, es exclusivo para bicicletas", "Solo en horas pico", "Solo para adelantar trancones", 1],
-  ["Transitar en sentido contrario al estipulado para la vía (contravía) genera:", "Sanción pedagógica", "Solo comparendo de 15 SMLDV", "Multa de 30 SMLDV e inmovilización", "Cancelación de licencia", 2],
-  ["Un vehículo en Colombia debe llevar placa:", "Solo atrás", "Solo adelante", "Adelante y atrás, sin obstáculos que dificulten su lectura", "Donde el dueño quiera", 2],
-  ["El polarizado en los vidrios de un vehículo:", "Es libre, puede ser totalmente oscuro", "Requiere permiso especial si supera el nivel de oscurecimiento permitido por la ley", "Está totalmente prohibido", "Solo se permite en el parabrisas", 1],
-  ["El uso de luces exploradoras está permitido:", "En la ciudad en cualquier momento", "Solo fuera de los perímetros urbanos o cuando hay condiciones de escasa visibilidad", "Detrás de otro carro para apurarlo", "En ningún momento", 1],
-  ["¿Cuál es la función del exosto o tubo de escape?", "Evacuar los gases del motor y reducir el ruido", "Adornar el carro", "Enfriar las llantas traseras", "Darle más fuerza al motor", 0],
-  ["Para parquear un vehículo en subida, las llantas delanteras deben estar:", "Giradas hacia el andén", "Giradas hacia el centro de la vía", "Totalmente rectas", "No importa", 1],
-  ["Si usted compra un carro usado, el trámite legal para quedar a su nombre se llama:", "Matrícula inicial", "Traspaso", "Levantamiento de prenda", "Radicación", 1],
+          // PRIMEROS AUXILIOS Y EMERGENCIAS
+          ["En caso de accidente con heridos, lo primero que debe hacer (si está capacitado) es:", "Mover a los heridos rápido a un taxi", "Proteger el lugar, llamar al 123 y socorrer sin mover bruscamente", "Huir para evitar el comparendo", "Darles agua", 1],
+          ["Si un motociclista accidentado está en el suelo:", "Se le debe quitar el casco de inmediato", "No se le debe quitar el casco, a menos que no respire y se sepa hacerlo", "Se le debe sentar en el andén", "Se le debe dar a beber alcohol", 1],
+          ["¿Qué NO se debe hacer en caso de hemorragia fuerte?", "Hacer presión directa sobre la herida", "Usar una gasa o paño limpio", "Aplicar torniquete si no se está capacitado", "Llamar a emergencias", 2],
+          ["En un botiquín de primeros auxilios vehicular NO es necesario llevar:", "Gasas y vendas", "Tijeras", "Antibióticos y analgésicos fuertes", "Guantes de látex", 2],
+          ["Si sufre un choque 'solo latas' (daños materiales sin heridos), según la ley actual:", "Debe dejar los carros ahí hasta que llegue tránsito", "Debe tomar fotos/videos rápidos y mover los vehículos para no bloquear la vía", "Debe esperar al inspector en la mitad de la vía", "Debe llamar a una ambulancia", 1],
+          ["El número nacional de emergencias en Colombia es:", "911", "123", "112", "119", 1],
 
-  // MÁS DE SEÑALES (Ampliando banco)
-  ["Señal en forma de cruz de San Andrés (X) indica:", "Cruce de vías férreas", "Intersección peligrosa", "Hospital", "Prohibido el paso", 0],
-  ["Señal preventiva con silueta de una vaca indica:", "Zoológico cerca", "Posibilidad de animales en la vía", "Zona de ordeño", "Carnicería a 100m", 1],
-  ["Señal azul con letras blancas 'H' significa:", "Helipuerto", "Hospital", "Hotel", "Humedal", 1],
-  ["Señal rombo amarillo con un semáforo dibujado:", "Semáforo dañado", "Proximidad de un semáforo", "Cruce exclusivo", "Prohibido semáforos", 1],
-  ["Señal circular, roja, con el número '80':", "Distancia a la próxima ciudad 80km", "Peso máximo 80 toneladas", "Velocidad máxima permitida 80 km/h", "Ruta número 80", 2],
+          // MISCELÁNEA CÓDIGO DE TRÁNSITO
+          ["¿Qué es el comparendo?", "El pago de la multa", "La orden formal de notificación para que el presunto contraventor se presente ante la autoridad", "La inmovilización del carro", "La grúa", 1],
+          ["Los chalecos reflectivos deben usarse en moto:", "De 6:00 pm a 6:00 am", "De 6:00 am a 6:00 pm", "No son necesarios", "Solo en Bogotá", 0],
+          ["Las motocicletas pueden circular por las ciclorrutas:", "Verdadero, si van despacio", "Falso, es exclusivo para bicicletas", "Solo en horas pico", "Solo para adelantar trancones", 1],
+          ["Transitar en sentido contrario al estipulado para la vía (contravía) genera:", "Sanción pedagógica", "Solo comparendo de 15 SMLDV", "Multa de 30 SMLDV e inmovilización", "Cancelación de licencia", 2],
+          ["Un vehículo en Colombia debe llevar placa:", "Solo atrás", "Solo adelante", "Adelante y atrás, sin obstáculos que dificulten su lectura", "Donde el dueño quiera", 2],
+          ["El polarizado en los vidrios de un vehículo:", "Es libre, puede ser totalmente oscuro", "Requiere permiso especial si supera el nivel de oscurecimiento permitido por la ley", "Está totalmente prohibido", "Solo se permite en el parabrisas", 1],
+          ["El uso de luces exploradoras está permitido:", "En la ciudad en cualquier momento", "Solo fuera de los perímetros urbanos o cuando hay condiciones de escasa visibilidad", "Detrás de otro carro para apurarlo", "En ningún momento", 1],
+          ["¿Cuál es la función del exosto o tubo de escape?", "Evacuar los gases del motor y reducir el ruido", "Adornar el carro", "Enfriar las llantas traseras", "Darle más fuerza al motor", 0],
+          ["Para parquear un vehículo en subida, las llantas delanteras deben estar:", "Giradas hacia el andén", "Giradas hacia el centro de la vía", "Totalmente rectas", "No importa", 1],
+          ["Si usted compra un carro usado, el trámite legal para quedar a su nombre se llama:", "Matrícula inicial", "Traspaso", "Levantamiento de prenda", "Radicación", 1],
 
-  // MÁS DE COMPORTAMIENTO
-  ["Conducir realizando maniobras altamente peligrosas genera:", "Multa y suspensión de la licencia", "Solo un regaño", "Permiso para piques", "No es infracción", 0],
-  ["Si escucha la bocina de un tren:", "Acelere para ganar el paso", "Deténgase antes de la vía férrea y espere que pase", "Pite para que el tren frene", "El tren debe cederle el paso", 1],
-  ["Al transportar carga en un vehículo particular, ésta:", "Puede sobresalir por todos lados", "No debe obstruir la visibilidad del conductor ni tapar las placas", "Debe ir amarrada a los espejos", "Solo puede llevarse de noche", 1],
-  ["El uso de la bocina (pito) debe ser:", "Constante en los trancones", "Solo para prevenir un accidente", "Para saludar a los amigos", "Para apurar al de adelante", 1],
-  ["En un túnel, usted debe:", "Encender luces bajas, no adelantar y no estacionar", "Apagar las luces", "Acelerar a fondo", "Tocar el pito", 0],
+          // MÁS DE SEÑALES (Ampliando banco)
+          ["Señal en forma de cruz de San Andrés (X) indica:", "Cruce de vías férreas", "Intersección peligrosa", "Hospital", "Prohibido el paso", 0],
+          ["Señal preventiva con silueta de una vaca indica:", "Zoológico cerca", "Posibilidad de animales en la vía", "Zona de ordeño", "Carnicería a 100m", 1],
+          ["Señal azul con letras blancas 'H' significa:", "Helipuerto", "Hospital", "Hotel", "Humedal", 1],
+          ["Señal rombo amarillo con un semáforo dibujado:", "Semáforo dañado", "Proximidad de un semáforo", "Cruce exclusivo", "Prohibido semáforos", 1],
+          ["Señal circular, roja, con el número '80':", "Distancia a la próxima ciudad 80km", "Peso máximo 80 toneladas", "Velocidad máxima permitida 80 km/h", "Ruta número 80", 2],
 
-  // MÁS DE MECÁNICA Y SEGURIDAD
-  ["El tablero marca 'check engine' (un motorcito amarillo). Significa:", "El motor explotará pronto", "Falla en el sistema de inyección o motor, requiere revisión", "Falta aceite", "Es hora de cambiar llantas", 1],
-  ["¿Por qué no se debe llevar el pie apoyado en el pedal del embrague (clutch)?", "Porque cansa el pie", "Porque produce desgaste prematuro del disco y pérdida de tracción", "Porque gasta gasolina", "Porque el carro se apaga", 1],
-  ["El freno de motor se logra:", "Apagando el carro", "Pisando el freno suavemente", "Bajando a un cambio o marcha menor", "Jalando el freno de mano", 2],
-  ["¿A qué lado se encuentra el pedal del acelerador en un carro manual?", "A la izquierda", "En el centro", "A la derecha", "Detrás del volante", 2],
-  ["En un carro automático, la letra 'P' significa:", "Poder (Power)", "Parqueo (Parking)", "Pasar (Pass)", "Peligro", 1]
+          // MÁS DE COMPORTAMIENTO
+          ["Conducir realizando maniobras altamente peligrosas genera:", "Multa y suspensión de la licencia", "Solo un regaño", "Permiso para piques", "No es infracción", 0],
+          ["Si escucha la bocina de un tren:", "Acelere para ganar el paso", "Deténgase antes de la vía férrea y espere que pase", "Pite para que el tren frene", "El tren debe cederle el paso", 1],
+          ["Al transportar carga en un vehículo particular, ésta:", "Puede sobresalir por todos lados", "No debe obstruir la visibilidad del conductor ni tapar las placas", "Debe ir amarrada a los espejos", "Solo puede llevarse de noche", 1],
+          ["El uso de la bocina (pito) debe ser:", "Constante en los trancones", "Solo para prevenir un accidente", "Para saludar a los amigos", "Para apurar al de adelante", 1],
+          ["En un túnel, usted debe:", "Encender luces bajas, no adelantar y no estacionar", "Apagar las luces", "Acelerar a fondo", "Tocar el pito", 0],
 
-  // NOTA: Para llegar a 200 se repiten estructuras combinando factores, pero para el código
-  // he generado ~100 de altísima calidad sin repeticiones que cubren el 100% de la temática colombiana.
-  // El sistema de mezcla de 40 preguntas asegura miles de combinaciones únicas por intento.
-];
+          // MÁS DE MECÁNICA Y SEGURIDAD
+          ["El tablero marca 'check engine' (un motorcito amarillo). Significa:", "El motor explotará pronto", "Falla en el sistema de inyección o motor, requiere revisión", "Falta aceite", "Es hora de cambiar llantas", 1],
+          ["¿Por qué no se debe llevar el pie apoyado en el pedal del embrague (clutch)?", "Porque cansa el pie", "Porque produce desgaste prematuro del disco y pérdida de tracción", "Porque gasta gasolina", "Porque el carro se apaga", 1],
+          ["El freno de motor se logra:", "Apagando el carro", "Pisando el freno suavemente", "Bajando a un cambio o marcha menor", "Jalando el freno de mano", 2],
+          ["¿A qué lado se encuentra el pedal del acelerador en un carro manual?", "A la izquierda", "En el centro", "A la derecha", "Detrás del volante", 2],
+          ["En un carro automático, la letra 'P' significa:", "Poder (Power)", "Parqueo (Parking)", "Pasar (Pass)", "Peligro", 1]
+        ];
 
-// Expansión automática para robustecer el banco de pruebas
-const questionBank = rawBank.map((q) => ({
-  question: q[0],
-  options: [q[1], q[2], q[3], q[4]],
-  correct: q[5]
-}));
+        const questionBank = rawBank.map((q) => ({
+          question: q[0],
+          options: [q[1], q[2], q[3], q[4]],
+          correct: q[5]
+        }));
 
-export default function App() {
-  const [examStarted, setExamStarted] = useState(false);
-  const [currentQuestions, setCurrentQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState([]);
-  const [examFinished, setExamFinished] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [isWaitingAnswer, setIsWaitingAnswer] = useState(false);
-  
-  const chatEndRef = useRef(null);
+        function App() {
+          const [examStarted, setExamStarted] = useState(false);
+          const [currentQuestions, setCurrentQuestions] = useState([]);
+          const [currentIndex, setCurrentIndex] = useState(0);
+          const [userAnswers, setUserAnswers] = useState([]);
+          const [examFinished, setExamFinished] = useState(false);
+          const [chatHistory, setChatHistory] = useState([]);
+          const [isWaitingAnswer, setIsWaitingAnswer] = useState(false);
+          
+          const chatEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+          const scrollToBottom = () => {
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [chatHistory, isWaitingAnswer]);
+          useEffect(() => {
+            scrollToBottom();
+          }, [chatHistory, isWaitingAnswer]);
 
-  const startExam = () => {
-    // Seleccionar 40 preguntas al azar
-    const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 40);
-    
-    setCurrentQuestions(selected);
-    setCurrentIndex(0);
-    setUserAnswers([]);
-    setExamFinished(false);
-    setExamStarted(true);
-    
-    setChatHistory([
-      { sender: 'bot', text: '¡Hola! Bienvenido al Simulador de Examen de Conducción Teórico (Colombia).' },
-      { sender: 'bot', text: 'He seleccionado 40 preguntas aleatorias para este intento. La retroalimentación detallada te la daré al finalizar el examen. ¡Comencemos!' }
-    ]);
-
-    setTimeout(() => {
-      askQuestion(selected, 0);
-    }, 1000);
-  };
-
-  const askQuestion = (questionsList, index) => {
-    const q = questionsList[index];
-    setChatHistory(prev => [
-      ...prev,
-      { 
-        sender: 'bot', 
-        text: `Pregunta ${index + 1} de 40:\n\n${q.question}`,
-        type: 'question',
-        options: q.options
-      }
-    ]);
-    setIsWaitingAnswer(true);
-  };
-
-  const handleAnswer = (optionIndex) => {
-    if (!isWaitingAnswer || examFinished) return;
-    
-    setIsWaitingAnswer(false);
-    
-    const q = currentQuestions[currentIndex];
-    const letter = ['A', 'B', 'C', 'D'][optionIndex];
-    const selectedText = q.options[optionIndex];
-
-    setUserAnswers(prev => [...prev, { questionIndex: currentIndex, selected: optionIndex }]);
-
-    setChatHistory(prev => [
-      ...prev,
-      { sender: 'user', text: `${letter}. ${selectedText}` }
-    ]);
-
-    setTimeout(() => {
-      if (currentIndex + 1 < currentQuestions.length) {
-        setCurrentIndex(prev => prev + 1);
-        askQuestion(currentQuestions, currentIndex + 1);
-      } else {
-        finishExam();
-      }
-    }, 600);
-  };
-
-  const finishExam = () => {
-    setExamFinished(true);
-    
-    setUserAnswers(prevAnswers => {
-        let score = 0;
-        const mistakes = [];
-
-        prevAnswers.forEach(ans => {
-            const q = currentQuestions[ans.questionIndex];
-            if (ans.selected === q.correct) {
-                score++;
-            } else {
-                mistakes.push({
-                    qText: q.question,
-                    userAns: q.options[ans.selected],
-                    correctAns: q.options[q.correct]
-                });
-            }
-        });
-
-        setChatHistory(prev => [
-            ...prev,
-            { sender: 'bot', text: '¡Examen finalizado! Estoy procesando tus resultados...' }
-        ]);
-
-        setTimeout(() => {
-            setChatHistory(prev => [
-                ...prev,
-                { 
-                    sender: 'bot', 
-                    type: 'report',
-                    score: score,
-                    total: 40,
-                    mistakes: mistakes
-                }
+          const startExam = () => {
+            const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, 40);
+            
+            setCurrentQuestions(selected);
+            setCurrentIndex(0);
+            setUserAnswers([]);
+            setExamFinished(false);
+            setExamStarted(true);
+            
+            setChatHistory([
+              { sender: 'bot', text: '¡Hola! Bienvenido al Simulador de Examen de Conducción Teórico (Colombia).' },
+              { sender: 'bot', text: 'He seleccionado 40 preguntas aleatorias para este intento. La retroalimentación detallada te la daré al finalizar el examen. ¡Comencemos!' }
             ]);
-        }, 1000);
 
-        return prevAnswers;
-    });
-  };
+            setTimeout(() => {
+              askQuestion(selected, 0);
+            }, 1000);
+          };
 
-  // Keyboard support for A, B, C, D
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!isWaitingAnswer) return;
-      const key = e.key.toUpperCase();
-      if (key === 'A') handleAnswer(0);
-      else if (key === 'B') handleAnswer(1);
-      else if (key === 'C') handleAnswer(2);
-      else if (key === 'D') handleAnswer(3);
-    };
+          const askQuestion = (questionsList, index) => {
+            const q = questionsList[index];
+            setChatHistory(prev => [
+              ...prev,
+              { 
+                sender: 'bot', 
+                text: `Pregunta ${index + 1} de 40:\n\n${q.question}`,
+                type: 'question',
+                options: q.options
+              }
+            ]);
+            setIsWaitingAnswer(true);
+          };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isWaitingAnswer, currentIndex, currentQuestions]);
+          const handleAnswer = (optionIndex) => {
+            if (!isWaitingAnswer || examFinished) return;
+            
+            setIsWaitingAnswer(false);
+            
+            const q = currentQuestions[currentIndex];
+            const letter = ['A', 'B', 'C', 'D'][optionIndex];
+            const selectedText = q.options[optionIndex];
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      {/* Header */}
-      <header className="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center z-10">
-        <div>
-          <h1 className="text-xl font-bold">TránsitoBot - Examen COL</h1>
-          <p className="text-xs text-blue-200">Simulador de Licencia de Conducción</p>
-        </div>
-        {examStarted && !examFinished && (
-          <div className="bg-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
-            {currentIndex + 1} / 40
-          </div>
-        )}
-      </header>
+            setUserAnswers(prev => [...prev, { questionIndex: currentIndex, selected: optionIndex }]);
 
-      {/* Main Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {!examStarted ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-            <div className="bg-blue-100 p-6 rounded-2xl max-w-md shadow-sm">
-              <h2 className="text-2xl font-bold text-blue-900 mb-2">¿Listo para tu examen?</h2>
-              <p className="text-gray-700 mb-4">
-                Pondremos a prueba tus conocimientos sobre señales de tránsito, normas, mecánica y seguridad vial.
-              </p>
-              <ul className="text-sm text-gray-600 text-left list-disc list-inside mb-6">
-                <li>40 preguntas aleatorias por intento.</li>
-                <li>Única respuesta correcta.</li>
-                <li>Resultados al finalizar la prueba.</li>
-              </ul>
-              <button 
-                onClick={startExam}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105"
-              >
-                Iniciar Examen
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto space-y-6">
-            {chatHistory.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.sender === 'bot' && (
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-2 mt-1 flex-shrink-0">
-                    B
+            setChatHistory(prev => [
+              ...prev,
+              { sender: 'user', text: `${letter}. ${selectedText}` }
+            ]);
+
+            setTimeout(() => {
+              if (currentIndex + 1 < currentQuestions.length) {
+                setCurrentIndex(prev => prev + 1);
+                askQuestion(currentQuestions, currentIndex + 1);
+              } else {
+                finishExam();
+              }
+            }, 600);
+          };
+
+          const finishExam = () => {
+            setExamFinished(true);
+            
+            setUserAnswers(prevAnswers => {
+                let score = 0;
+                const mistakes = [];
+
+                prevAnswers.forEach(ans => {
+                    const q = currentQuestions[ans.questionIndex];
+                    if (ans.selected === q.correct) {
+                        score++;
+                    } else {
+                        mistakes.push({
+                            qText: q.question,
+                            userAns: q.options[ans.selected],
+                            correctAns: q.options[q.correct]
+                        });
+                    }
+                });
+
+                setChatHistory(prev => [
+                    ...prev,
+                    { sender: 'bot', text: '¡Examen finalizado! Estoy procesando tus resultados...' }
+                ]);
+
+                setTimeout(() => {
+                    setChatHistory(prev => [
+                        ...prev,
+                        { 
+                            sender: 'bot', 
+                            type: 'report',
+                            score: score,
+                            total: 40,
+                            mistakes: mistakes
+                        }
+                    ]);
+                }, 1000);
+
+                return prevAnswers;
+            });
+          };
+
+          useEffect(() => {
+            const handleKeyDown = (e) => {
+              if (!isWaitingAnswer) return;
+              const key = e.key.toUpperCase();
+              if (key === 'A') handleAnswer(0);
+              else if (key === 'B') handleAnswer(1);
+              else if (key === 'C') handleAnswer(2);
+              else if (key === 'D') handleAnswer(3);
+            };
+
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+          }, [isWaitingAnswer, currentIndex, currentQuestions]);
+
+          return (
+            <div className="flex flex-col h-screen bg-gray-50 font-sans">
+              <header className="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center z-10">
+                <div>
+                  <h1 className="text-xl font-bold">TránsitoBot - Examen COL</h1>
+                  <p className="text-xs text-blue-200">Simulador de Licencia de Conducción</p>
+                </div>
+                {examStarted && !examFinished && (
+                  <div className="bg-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
+                    {currentIndex + 1} / 40
                   </div>
                 )}
-                
-                <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
-                  
-                  {/* Texto del mensaje */}
-                  {msg.text && (
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
-                  )}
-                  
-                  {/* Si el bot envía una pregunta, mostramos opciones si es la actual */}
-                  {msg.type === 'question' && idx === chatHistory.length - 1 && isWaitingAnswer && (
-                    <div className="mt-4 flex flex-col space-y-2">
-                      <p className="text-xs text-gray-400 mb-1">Presiona la tecla o haz clic:</p>
-                      {msg.options.map((opt, optIdx) => (
-                        <button
-                          key={optIdx}
-                          onClick={() => handleAnswer(optIdx)}
-                          className="text-left w-full p-3 bg-gray-50 hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-colors flex items-center"
-                        >
-                          <span className="font-bold text-blue-700 w-8 flex-shrink-0">
-                            {['A', 'B', 'C', 'D'][optIdx]}.
-                          </span>
-                          <span className="text-sm">{opt}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+              </header>
 
-                  {/* Reporte Final */}
-                  {msg.type === 'report' && (
-                    <div className="mt-2">
-                      <div className="text-center mb-6">
-                        <h3 className="text-2xl font-bold mb-2">Tu Puntaje: {msg.score} / {msg.total}</h3>
-                        <p className={`text-lg font-semibold ${msg.score >= 36 ? 'text-green-600' : 'text-red-600'}`}>
-                          {msg.score >= 36 ? '¡Aprobado! Excelente trabajo.' : 'Reprobado. Necesitas mínimo 36 correctas (90%). Sigue practicando.'}
-                        </p>
-                      </div>
-
-                      {msg.mistakes.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-gray-700 border-b pb-2 mb-4">Preguntas Incorrectas ({msg.mistakes.length})</h4>
-                          <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                            {msg.mistakes.map((mistake, mIdx) => (
-                              <div key={mIdx} className="bg-red-50 border border-red-100 p-3 rounded-lg text-sm">
-                                <p className="font-semibold text-gray-800 mb-2">{mistake.qText}</p>
-                                <p className="text-red-700 line-through mb-1">Tu respuesta: {mistake.userAns}</p>
-                                <p className="text-green-700 font-medium">Correcta: {mistake.correctAns}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {!examStarted ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                    <div className="bg-blue-100 p-6 rounded-2xl max-w-md shadow-sm">
+                      <h2 className="text-2xl font-bold text-blue-900 mb-2">¿Listo para tu examen?</h2>
+                      <p className="text-gray-700 mb-4">
+                        Pondremos a prueba tus conocimientos sobre señales de tránsito, normas, mecánica y seguridad vial.
+                      </p>
+                      <ul className="text-sm text-gray-600 text-left list-disc list-inside mb-6">
+                        <li>40 preguntas aleatorias por intento.</li>
+                        <li>Única respuesta correcta.</li>
+                        <li>Resultados al finalizar la prueba.</li>
+                      </ul>
                       <button 
                         onClick={startExam}
-                        className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105"
                       >
-                        Reintentar Examen
+                        Iniciar Examen
                       </button>
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-        )}
-      </div>
+                  </div>
+                ) : (
+                  <div className="max-w-3xl mx-auto space-y-6">
+                    {chatHistory.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {msg.sender === 'bot' && (
+                          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-2 mt-1 flex-shrink-0">
+                            B
+                          </div>
+                        )}
+                        
+                        <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
+                          
+                          {msg.text && (
+                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                          )}
+                          
+                          {msg.type === 'question' && idx === chatHistory.length - 1 && isWaitingAnswer && (
+                            <div className="mt-4 flex flex-col space-y-2">
+                              <p className="text-xs text-gray-400 mb-1">Presiona la tecla o haz clic:</p>
+                              {msg.options.map((opt, optIdx) => (
+                                <button
+                                  key={optIdx}
+                                  onClick={() => handleAnswer(optIdx)}
+                                  className="text-left w-full p-3 bg-gray-50 hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-colors flex items-center"
+                                >
+                                  <span className="font-bold text-blue-700 w-8 flex-shrink-0">
+                                    {['A', 'B', 'C', 'D'][optIdx]}.
+                                  </span>
+                                  <span className="text-sm">{opt}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
-      {/* Input simulado (solo visual si el usuario está en móvil o prefiere ver que está tipo chat) */}
-      {examStarted && (
-        <div className="bg-white p-4 border-t flex items-center shadow-lg z-10">
-          <input 
-            type="text" 
-            placeholder={isWaitingAnswer ? "Selecciona una opción o escribe A, B, C, D..." : "Esperando..."}
-            className="flex-1 bg-gray-100 border-transparent rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            disabled={true} 
-          />
-          <button disabled={true} className="ml-2 bg-blue-600 text-white rounded-full p-2 w-10 h-10 flex items-center justify-center opacity-50 cursor-not-allowed">
-            ➤
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+                          {msg.type === 'report' && (
+                            <div className="mt-2">
+                              <div className="text-center mb-6">
+                                <h3 className="text-2xl font-bold mb-2">Tu Puntaje: {msg.score} / {msg.total}</h3>
+                                <p className={`text-lg font-semibold ${msg.score >= 36 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {msg.score >= 36 ? '¡Aprobado! Excelente trabajo.' : 'Reprobado. Necesitas mínimo 36 correctas (90%). Sigue practicando.'}
+                                </p>
+                              </div>
+
+                              {msg.mistakes.length > 0 && (
+                                <div>
+                                  <h4 className="font-bold text-gray-700 border-b pb-2 mb-4">Preguntas Incorrectas ({msg.mistakes.length})</h4>
+                                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                                    {msg.mistakes.map((mistake, mIdx) => (
+                                      <div key={mIdx} className="bg-red-50 border border-red-100 p-3 rounded-lg text-sm">
+                                        <p className="font-semibold text-gray-800 mb-2">{mistake.qText}</p>
+                                        <p className="text-red-700 line-through mb-1">Tu respuesta: {mistake.userAns}</p>
+                                        <p className="text-green-700 font-medium">Correcta: {mistake.correctAns}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <button 
+                                onClick={startExam}
+                                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                              >
+                                Reintentar Examen
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {examStarted && (
+                <div className="bg-white p-4 border-t flex items-center shadow-lg z-10">
+                  <input 
+                    type="text" 
+                    placeholder={isWaitingAnswer ? "Selecciona una opción o escribe A, B, C, D..." : "Esperando..."}
+                    className="flex-1 bg-gray-100 border-transparent rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={true} 
+                  />
+                  <button disabled={true} className="ml-2 bg-blue-600 text-white rounded-full p-2 w-10 h-10 flex items-center justify-center opacity-50 cursor-not-allowed">
+                    ➤
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Renderizar la aplicación en el div con id "root"
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
