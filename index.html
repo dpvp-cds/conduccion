@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TránsitoBot - Examen de Conducción</title>
-    <!-- Importar Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Hoja de estilos de Tailwind generada en el servidor (Vercel) -->
+    <link rel="stylesheet" href="/style.css">
+    
     <!-- Importar React y ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -18,7 +20,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Banco de datos compactado para eficiencia (Pregunta, Opción A, Opción B, Opción C, Opción D, Índice Correcto)
         const rawBank = [
           // SEÑALES Y MARCAS VIALES
           ["¿Qué indica una señal de tránsito con forma de octágono rojo y letras blancas?", "Ceda el paso", "Pare", "Prohibido parquear", "Zona escolar", 1],
@@ -355,7 +356,7 @@
                           </div>
                         )}
                         
-                        <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
+                        <div style={{ maxWidth: '85%' }} className={`sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
                           
                           {msg.text && (
                             <p className="whitespace-pre-wrap">{msg.text}</p>
